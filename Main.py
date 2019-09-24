@@ -1,3 +1,9 @@
+# INSTRUCTIONS
+# ------------
+# Control the ship using arrow keys or W/A/S/D
+# Pressing space fires a shot to the other end of the screen
+# Pressing escape exits the game
+
 import pathlib
 import arcade
 
@@ -8,6 +14,7 @@ SCREEN_TITLE = "Project 1"
 SHIP_PATH = pathlib.Path.cwd() / "Resources" / "Ship.png"
 BULLET_PATH = pathlib.Path.cwd() / "Resources" / "Bullet.png"
 BACKGROUND_PATH = pathlib.Path.cwd() / "Resources" / "Background.png"
+LASER_PATH = pathlib.Path.cwd() / "Resources" / "Laser.wav"
 
 
 class MyGame(arcade.Window):
@@ -16,28 +23,30 @@ class MyGame(arcade.Window):
         super().__init__(width, height, title)
         arcade.set_background_color(arcade.color.BLACK)
 
-        # setup lists for referencing/appending later
+        # setup done here instead of a setup function to avoid warnings about initialization outside of __init__
+        # sprite lists for referencing/appending later
         self.bullet_list = arcade.SpriteList()
         self.background_list = arcade.SpriteList()
         # initial ship position and speed
         self.ship_x = 100
-        self.ship_y = 205
-        self.SHIP_SPEED = 300
+        self.ship_y = SCREEN_HEIGHT / 2
+        self.SHIP_SPEED = 200
         # boolean flags for movement logic in on_update
         self.right = False
         self.left = False
         self.up = False
         self.down = False
         # pathlib to ensure working directory regardless of platform
+        self.laser_sound = arcade.Sound(LASER_PATH)
         self.ship = arcade.Sprite(SHIP_PATH, center_x=300, center_y=50)
-        self.background_1 = arcade.Sprite(BACKGROUND_PATH, center_x=IMAGE_WIDTH/2, center_y=SCREEN_HEIGHT/2)
-        self.background_2 = arcade.Sprite(BACKGROUND_PATH, center_x=SCREEN_WIDTH + IMAGE_WIDTH / 2, center_y=SCREEN_HEIGHT / 2)
+        self.background1 = arcade.Sprite(BACKGROUND_PATH, center_x=IMAGE_WIDTH/2, center_y=SCREEN_HEIGHT/2)
+        self.background2 = arcade.Sprite(BACKGROUND_PATH, center_x=SCREEN_WIDTH+IMAGE_WIDTH/2, center_y=SCREEN_HEIGHT/2)
 
         # set up infinite scrolling background logic
-        self.background_1.change_x = -2
-        self.background_2.change_x = -2
-        self.background_list.append(self.background_1)
-        self.background_list.append(self.background_2)
+        self.background1.change_x = -3
+        self.background2.change_x = -3
+        self.background_list.append(self.background1)
+        self.background_list.append(self.background2)
 
     def on_draw(self):
         arcade.start_render()
@@ -71,16 +80,10 @@ class MyGame(arcade.Window):
         self.bullet_list.update()
 
         # side-scrolling background logic
-        if self.background_1.left == -IMAGE_WIDTH:
-            self.background_1.center_x = SCREEN_WIDTH + IMAGE_WIDTH//2
-        if self.background_2.left == -IMAGE_WIDTH:
-            self.background_2.center_x = SCREEN_WIDTH + IMAGE_WIDTH//2
-        #checks if the left edge of the background image is at -820 (image width) aka fully offscreen
-        # if so it moves it basically opposite, all the way to the right offscreen
-        #while the other pic continues to scroll left
-        #repeat
-        #so it moves the center of the image all the way over, the rest are all constants for the image width and screen width
-        #define way up here
+        if self.background1.left <= -820:
+            self.background1.center_x = SCREEN_WIDTH + IMAGE_WIDTH//2
+        if self.background2.left <= -820:
+            self.background2.center_x = SCREEN_WIDTH + IMAGE_WIDTH//2
 
         self.background_list.update()
 
@@ -96,6 +99,7 @@ class MyGame(arcade.Window):
             self.down = True
 
         if symbol == arcade.key.SPACE:
+            self.laser_sound.play()
             bullet = Bullet(BULLET_PATH)
             bullet.center_x = self.ship.center_x + 76
             bullet.center_y = self.ship.center_y
@@ -120,7 +124,6 @@ class Bullet(arcade.Sprite):
     def update(self):
         self.center_x += 4
         if self.center_x > SCREEN_WIDTH:
-            print(self.center_x)
             self.kill()
 
 

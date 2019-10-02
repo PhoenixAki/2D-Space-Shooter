@@ -41,10 +41,13 @@ class MyGame(arcade.Window):
         # timers
         self.shot_timer = 0
         self.enemy_timer = 0
+        self.enemy_shot_timer = 0
         # pathlib to ensure working directory regardless of platform
         self.laser_sound = arcade.Sound(PLAYER_SHOT_SOUND_PATH)
         self.player = arcade.Sprite(PLAYER_PATH)
-        self.newEnemy = None
+        self.enemy_rand = 0
+        self.enemy_shooting = None
+        self.new_enemy = None
         self.shot = None
         self.background1 = arcade.Sprite(BACKGROUND_PATH, center_x=IMAGE_WIDTH / 2, center_y=SCREEN_HEIGHT / 2)
         self.background2 = arcade.Sprite(BACKGROUND_PATH, center_x=SCREEN_WIDTH+IMAGE_WIDTH/2, center_y=SCREEN_HEIGHT/2)
@@ -103,13 +106,26 @@ class MyGame(arcade.Window):
         self.shot_timer += delta_time
         self.shot_list.update()
 
+        if len(self.enemy_list) > 0:
+            self.enemy_shot_timer += delta_time
+
         # spawning enemies
         if self.enemy_timer >= 5:
             self.enemy_timer = 0
-            self.newEnemy = Enemy(ENEMY_PATH, scale=.75)
-            self.newEnemy.center_x = 880
-            self.newEnemy.center_y = random.randint(27, SCREEN_HEIGHT-27)
-            self.enemy_list.append(self.newEnemy)
+            self.new_enemy = Enemy(ENEMY_PATH, scale=.75)
+            self.new_enemy.center_x = 880
+            self.new_enemy.center_y = random.randint(27, SCREEN_HEIGHT-27)
+            self.enemy_list.append(self.new_enemy)
+
+        # enemy firing
+        if self.enemy_shot_timer >= 1.5:
+            self.enemy_shot_timer = 0
+            self.enemy_rand = random.randint(0, len(self.enemy_list)-1)
+            self.enemy_shooting = self.enemy_list.sprite_list[self.enemy_rand]
+            self.shot = Shot(ENEMY_SHOT_PATH, -8.5)
+            self.shot.center_x = self.enemy_shooting.center_x - 35
+            self.shot.center_y = self.enemy_shooting.center_y
+            self.shot_list.append(self.shot)
 
         # side-scrolling background logic
         if self.background1.left <= -820:

@@ -18,7 +18,9 @@ PLAYER_SHOT_PATH = str(pathlib.Path.cwd() / "Resources" / "PlayerShot.png")
 ENEMY_SHOT_PATH = str(pathlib.Path.cwd() / "Resources" / "EnemyShot1.png")
 BACKGROUND_PATH = str(pathlib.Path.cwd() / "Resources" / "Background.png")
 PLAYER_SHOT_SOUND_PATH = str(pathlib.Path.cwd() / "Resources" / "PlayerShot.wav")
+PLAYER_HIT_SOUND_PATH = str(pathlib.Path.cwd() / "Resources" / "PlayerHit.wav")
 ENEMY_SHOT_SOUND_PATH = str(pathlib.Path.cwd() / "Resources" / "EnemyShot.wav")
+ENEMY_HIT_SOUND_PATH = str(pathlib.Path.cwd() / "Resources" / "EnemyHit.wav")
 WIN_SOUND_PATH = str(pathlib.Path.cwd() / "Resources" / "Win.wav")
 # LOSE_SOUND_PATH = str(pathlib.Path.cwd() / "Resources" / "Lose.wav")
 
@@ -50,7 +52,9 @@ class MyGame(arcade.Window):
         self.down = None
         # initializing sounds and sprites
         self.player_shot_sound = arcade.Sound(PLAYER_SHOT_SOUND_PATH)
+        self.player_hit_sound = arcade.Sound(PLAYER_HIT_SOUND_PATH)
         self.enemy_shot_sound = arcade.Sound(ENEMY_SHOT_SOUND_PATH)
+        self.enemy_hit_sound = arcade.Sound(ENEMY_HIT_SOUND_PATH)
         self.win_sound = arcade.Sound(WIN_SOUND_PATH)
         # self.lose_sound = arcade.Sound(LOSE_SOUND_PATH)
         self.player = arcade.Sprite(PLAYER_PATH)
@@ -60,10 +64,13 @@ class MyGame(arcade.Window):
         self.new_shot = None
         self.enemy_rand = 0
         self.enemy_spawn_time = 0
+        self.player_health = 0
 
         # set up infinite scrolling background logic
-        self.background1 = arcade.Sprite(BACKGROUND_PATH, center_x=IMAGE_WIDTH / 2, center_y=SCREEN_HEIGHT / 2)
-        self.background2 = arcade.Sprite(BACKGROUND_PATH, center_x=SCREEN_WIDTH+IMAGE_WIDTH/2, center_y=SCREEN_HEIGHT/2)
+        self.background1 = arcade.Sprite(BACKGROUND_PATH, center_x=IMAGE_WIDTH / 2,
+                                         center_y=SCREEN_HEIGHT / 2)
+        self.background2 = arcade.Sprite(BACKGROUND_PATH, center_x=SCREEN_WIDTH+IMAGE_WIDTH/2,
+                                         center_y=SCREEN_HEIGHT/2)
         self.background1.change_x = -3
         self.background2.change_x = -3
         self.background_list.append(self.background1)
@@ -80,6 +87,7 @@ class MyGame(arcade.Window):
         self.player_shot_timer = 1
         self.score = 0
         self.enemy_timer = 3
+        self.player_health = 2
         self.enemy_spawn_time = 4
         self.right = False
         self.left = False
@@ -90,13 +98,24 @@ class MyGame(arcade.Window):
 
     def on_draw(self):
         arcade.start_render()
-        self.background_list.draw()
-        self.player.draw()
-        self.enemy_list.draw()
-        self.player_shot_list.draw()
-        self.enemy_shot_list.draw()
-
-        arcade.draw_text(f"SCORE: {self.score}", 20, 380, arcade.color.YELLOW, 20)
+        if self.state == "RUNNING":
+            self.background_list.draw()
+            self.player.draw()
+            self.enemy_list.draw()
+            self.player_shot_list.draw()
+            self.enemy_shot_list.draw()
+            arcade.draw_text(f"SCORE: {self.score}", 20, 380, arcade.color.YELLOW, 20)
+            arcade.draw_text(f"HEALTH: {self.player_health}", 20, 350, arcade.color.YELLOW, 20)
+        elif self.state == "WIN":
+            arcade.draw_text(f"You win!\nFinal Score: {self.score}", SCREEN_WIDTH/2, SCREEN_HEIGHT/2,
+                             arcade.color.YELLOW, 30, anchor_x="center")
+            arcade.draw_text("Press Q to quit, or R to restart.", SCREEN_WIDTH/2, SCREEN_HEIGHT/2-30,
+                             arcade.color.YELLOW, 30, anchor_x="center")
+        elif self.state == "LOSE":
+            arcade.draw_text(f"You lose...\nFinal Score: {self.score}", SCREEN_WIDTH/2, SCREEN_HEIGHT/2,
+                             arcade.color.YELLOW, 30, anchor_x="center")
+            arcade.draw_text("Press Q to quit, or R to restart.", SCREEN_WIDTH/2, SCREEN_HEIGHT/2-30,
+                             arcade.color.YELLOW, 30, anchor_x="center")
 
     def on_update(self, delta_time):
         # check state of the game before doing anything else
@@ -118,7 +137,7 @@ class MyGame(arcade.Window):
             # spawning enemies every x seconds
             if self.enemy_timer >= self.enemy_spawn_time:
                 self.enemy_timer = 0
-                self.new_enemy = Enemy(ENEMY_PATH, "Enemy", 2, .75)
+                self.new_enemy = Enemy(ENEMY_PATH, 2, 1, .75)
                 self.new_enemy.center_x = 880
                 self.new_enemy.center_y = random.randint(27, SCREEN_HEIGHT-27)
                 self.enemy_list.append(self.new_enemy)
@@ -135,14 +154,6 @@ class MyGame(arcade.Window):
                     self.new_shot.center_y = self.enemy_shooting.center_y
                     self.enemy_shot_list.append(self.new_shot)
                     self.enemy_shot_sound.play()
-        elif self.state == "LOSE":
-            # self.lose_sound.play()
-            self.state = "END"
-            self.lose()
-        elif self.state == "WIN":
-            self.win_sound.play()
-            self.state = "END"
-            self.win()
 
     def move_player(self, delta_time):
         # check the flags for movement and update accordingly
@@ -179,20 +190,38 @@ class MyGame(arcade.Window):
         for shot in self.player_shot_list:
             self.collisions = shot.collides_with_list(self.enemy_list)
             if len(self.collisions) > 0:
-                # only kill one enemy per shot
-                if self.collisions[0].name == "Enemy":
-                    # self.enemy_explosion.play()
+                # boss enemies have 2 health, otherwise kill right away
+                if self.collisions[0].health == 2:
+                    self.enemy_hit_sound.play()
+                    self.collisions[0].health -= 1
+                    shot.kill()
+                elif self.collisions[0].health == 1:
+                    self.enemy_hit_sound.play()
                     self.collisions[0].kill()
                     shot.kill()
                     self.score += 1
                     if self.score >= 3:
+                        self.win_sound.play()
                         self.state = "WIN"
+                        self.win()
 
         # iterate through enemy shots to check for player collision
         for shot in self.enemy_shot_list:
             if shot.collides_with_sprite(self.player):
-                # self.player_explosion.play()
-                self.state = "LOSE"
+                if self.player_health == 2:
+                    self.player_hit_sound.play()
+                    self.player_health -= 1
+                    shot.kill()
+                elif self.player_health == 1:
+                    # self.lose_sound.play()
+                    self.state = "LOSE"
+                    self.lose()
+
+        # check if player is colliding with enemy ships
+        if len(self.player.collides_with_list(self.enemy_list)) > 0:
+            # self.lose_sound.play()
+            self.state = "LOSE"
+            self.lose()
 
     def on_key_press(self, symbol, modifiers):
         # check for keyboard input on arrows or W/A/S/D
@@ -213,8 +242,11 @@ class MyGame(arcade.Window):
             self.new_shot.center_y = self.player.center_y
             self.player_shot_list.append(self.new_shot)
 
-        if symbol == arcade.key.ESCAPE:
+        if symbol == arcade.key.Q and (self.state == "WIN" or self.state == "LOSE"):
             self.close()
+
+        if symbol == arcade.key.R and (self.state == "WIN" or self.state == "LOSE"):
+            self.setup()
 
     def on_key_release(self, symbol, modifiers):
         # check for keyboard release on arrows or W/A/S/D
@@ -228,10 +260,10 @@ class MyGame(arcade.Window):
             self.down = False
 
     def lose(self):
-        print("lose")
+        pass
 
     def win(self):
-        print("win")
+        pass
 
 
 class Shot(arcade.Sprite):
@@ -246,10 +278,10 @@ class Shot(arcade.Sprite):
 
 
 class Enemy(arcade.Sprite):
-    def __init__(self, filename, name, speed, sprite_scale):
+    def __init__(self, filename, speed, health, sprite_scale):
         super().__init__(filename, scale=sprite_scale)
-        self.name = name
         self.speed = speed
+        self.health = health
         self.ready = False  # used to track if enemy is done with initial fade onto screen
 
     def update(self):

@@ -1,8 +1,12 @@
-# INSTRUCTIONS
-# ------------
-# Control the ship using arrow keys or W/A/S/D
-# Pressing space fires a shot to the other end of the screen
-# Pressing escape exits the game
+# INSTRUCTIONS + COMMENTS
+# -----------------------
+# Control the ship using arrow keys or W/A/S/D.
+# Pressing space fires a shot to the other end of the screen.
+# First enemy type scores 2 points, at 45 points the second enemy starts spawning.
+# Second enemy scores 3 points, at 60 points the player wins.
+# Couldn't find fitting free lose_sound, so I went with Mario (disclaimer: I do not own rights to Mario music).
+# All project requirements are met except technically defeating 60 enemies (it is set up by points not enemy kills).
+# You can change lines 221 and 223 to be 1 instead of 2 and 3 and it would then take 60 enemies.
 
 import pathlib
 import arcade
@@ -89,15 +93,14 @@ class MyGame(arcade.Window):
         self.player.center_y = SCREEN_HEIGHT / 2
         self.player_shot_timer = 1
         self.score = 0
-        self.enemy_timer = 3
+        self.enemy_timer = 2
         self.player_health = 2
-        self.enemy_spawn_time = 4
+        self.enemy_spawn_time = 3
         self.move_right = False
         self.move_left = False
         self.move_up = False
         self.move_down = False
         self.state = "RUNNING"  # reset state to running so movement is allowed
-        self.player_shot_timer = 1
 
     def on_draw(self):
         arcade.start_render()
@@ -123,68 +126,65 @@ class MyGame(arcade.Window):
     def on_update(self, delta_time):
         # check state of the game before doing anything else
         if self.state == "RUNNING":
-            # some code in other functions to save clutter here
-            self.move_player(delta_time)
-            self.move_background()
-            self.check_collisions()
-
             # update timers and sprite lists
             self.enemy_timer += delta_time
             self.enemy_list.update()
+            self.enemy_shot_list.update()
             self.player_shot_timer += delta_time
             self.player_shot_list.update()
-            self.enemy_shot_list.update()
+
             if len(self.enemy_list) > 0:
                 self.enemy_shot_timer += delta_time
 
-            # spawning enemies every x seconds
-            if self.enemy_timer >= self.enemy_spawn_time:
-                self.enemy_timer = 0
-                if self.score < 45:
-                    self.new_enemy = Enemy(ENEMY1_PATH, "Enemy1", 2, 1)
+            # some code in other functions to save clutter here
+            self.move_background()
+            self.move_player(delta_time)
+            self.manage_enemies()
+            self.check_collisions()
+
+    def manage_enemies(self):
+        # spawning enemies every x seconds
+        if self.enemy_timer >= self.enemy_spawn_time:
+            self.enemy_timer = 0
+
+            if self.score < 45:
+                self.new_enemy = Enemy(ENEMY1_PATH, "Enemy1", 2, 1)
+            else:
+                self.new_enemy = Enemy(ENEMY2_PATH, "Enemy2", 4, 2)
+
+            self.new_enemy.center_x = 880
+            self.new_enemy.center_y = random.randint(80, SCREEN_HEIGHT - 80)
+            self.enemy_list.append(self.new_enemy)
+
+        # enemies fire every 1.5 seconds
+        if self.enemy_shot_timer >= 1:
+            self.enemy_shot_timer = 0
+            self.enemy_rand = random.randint(0, len(self.enemy_list) - 1)
+            self.enemy_shooting = self.enemy_list.sprite_list[self.enemy_rand]
+
+            # only fire if enemy is fully on-screen
+            if self.enemy_shooting.ready:
+                self.enemy_shot_sound.play()
+
+                if self.enemy_shooting.name == "Enemy1":
+                    self.new_shot = Shot(ENEMY_SHOT_PATH, -7.5, 2)
                 else:
-                    self.new_enemy = Enemy(ENEMY2_PATH, "Enemy2", 4, 2)
-                self.new_enemy.center_x = 880
-                self.new_enemy.center_y = random.randint(80, SCREEN_HEIGHT - 80)
-                self.enemy_list.append(self.new_enemy)
+                    self.new_shot = Shot(ENEMY_SHOT2_PATH, -10, 2)
 
-            # enemies fire every 1.5 seconds
-            if self.enemy_shot_timer >= 1:
-                self.enemy_shot_timer = 0
-                self.enemy_rand = random.randint(0, len(self.enemy_list)-1)
-                self.enemy_shooting = self.enemy_list.sprite_list[self.enemy_rand]
-                # only fire if enemy is fully on-screen
-                if self.enemy_shooting.ready:
-                    self.enemy_shot_sound.play()
-                    if self.enemy_shooting.name == "Enemy1":
-                        self.new_shot = Shot(ENEMY_SHOT_PATH, -7.5, 2)
-                    else:
-                        self.new_shot = Shot(ENEMY_SHOT2_PATH, -10, 2)
-
-                    self.new_shot.right = self.enemy_shooting.left + 10
-                    self.new_shot.center_y = self.enemy_shooting.center_y
-                    self.enemy_shot_list.append(self.new_shot)
+                self.new_shot.right = self.enemy_shooting.left + 10
+                self.new_shot.center_y = self.enemy_shooting.center_y
+                self.enemy_shot_list.append(self.new_shot)
 
     def move_player(self, delta_time):
         # check the flags for movement and update accordingly
-        if self.move_right:
+        if self.move_right and self.player.right < SCREEN_WIDTH:
             self.player.center_x += self.PLAYER_SPEED * delta_time
-        if self.move_left:
+        if self.move_left and self.player.left > 0:
             self.player.center_x -= self.PLAYER_SPEED * delta_time
-        if self.move_up:
+        if self.move_up and self.player.top < SCREEN_HEIGHT:
             self.player.center_y += self.PLAYER_SPEED * delta_time
-        if self.move_down:
+        if self.move_down and self.player.bottom > 0:
             self.player.center_y -= self.PLAYER_SPEED * delta_time
-
-        # prevent movement outside of the window boundaries
-        if self.player.right > SCREEN_WIDTH:
-            self.player.center_x -= self.PLAYER_SPEED * delta_time
-        if self.player.left < 0:
-            self.player.center_x += self.PLAYER_SPEED * delta_time
-        if self.player.top > SCREEN_HEIGHT:
-            self.player.center_y -= self.PLAYER_SPEED * delta_time
-        if self.player.bottom < 0:
-            self.player.center_y += self.PLAYER_SPEED * delta_time
 
     def move_background(self):
         # side-scrolling background logic
@@ -206,6 +206,7 @@ class MyGame(arcade.Window):
                     self.collisions[0].health -= 1
                     self.new_enemy = Enemy(ENEMY2_DAMAGED_PATH, self.collisions[0].name, self.collisions[0].speed,
                                            self.collisions[0].health)
+
                     self.new_enemy.center_x = self.collisions[0].center_x
                     self.new_enemy.center_y = self.collisions[0].center_y
                     self.enemy_list.append(self.new_enemy)
@@ -215,6 +216,7 @@ class MyGame(arcade.Window):
                     self.enemy_hit_sound.play()
                     self.collisions[0].kill()
                     shot.kill()
+
                     if self.collisions[0].name == "Enemy1":
                         self.score += 2
                     else:
@@ -267,9 +269,6 @@ class MyGame(arcade.Window):
         if symbol == arcade.key.R and (self.state == "WIN" or self.state == "LOSE"):
             self.setup()
 
-        if symbol == arcade.key.ESCAPE:
-            self.close()
-
     def on_key_release(self, symbol, modifiers):
         # check for keyboard release on arrows or W/A/S/D
         if symbol == arcade.key.RIGHT or symbol == arcade.key.D:
@@ -289,7 +288,7 @@ class Shot(arcade.Sprite):
 
     def update(self):
         self.center_x += self.speed
-        if self.right > SCREEN_WIDTH - 10 or self.center_x < 10:
+        if self.right > SCREEN_WIDTH - 10 or self.center_x < 10:  # offset by 10 to not hit off-screen enemies
             self.kill()
 
 
@@ -308,6 +307,7 @@ class Enemy(arcade.Sprite):
         else:
             if self.ready is False:
                 self.ready = True
+
             self.center_y += self.speed
             if self.top > SCREEN_HEIGHT or self.bottom < 0:
                 self.speed *= -1

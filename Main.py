@@ -16,7 +16,13 @@ IMAGE_WIDTH = 820
 SCREEN_WIDTH = 820
 SCREEN_HEIGHT = 410
 SCREEN_TITLE = "Project 1"
-ENEMY1_PATH = str(pathlib.Path.cwd() / "Resources" / "Enemy1.png")
+DANNY_DEVITO = False
+
+if DANNY_DEVITO is True:
+    ENEMY1_PATH = str(pathlib.Path.cwd() / "Resources" / "Danny.png")
+else:
+    ENEMY1_PATH = str(pathlib.Path.cwd() / "Resources" / "Enemy1.png")
+
 ENEMY2_PATH = str(pathlib.Path.cwd() / "Resources" / "Enemy2.png")
 ENEMY2_DAMAGED_PATH = str(pathlib.Path.cwd() / "Resources" / "Enemy2Damaged.png")
 ENEMY_SHOT_PATH = str(pathlib.Path.cwd() / "Resources" / "EnemyShot1.png")

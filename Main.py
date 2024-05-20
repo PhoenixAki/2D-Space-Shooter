@@ -6,7 +6,7 @@
 # Second enemy scores 3 points, at 60 points the player wins.
 # Couldn't find fitting free lose_sound, so I went with Mario (disclaimer: I do not own rights to Mario music).
 # All project requirements are met except technically defeating 60 enemies (it is set up by points not enemy kills).
-# You can change lines 221 and 223 to be 1 instead of 2 and 3 and it would then take 60 enemies.
+# You can change lines 221 and 223 to be 1 instead of 2 and 3, and it would then take 60 enemies.
 
 import pathlib
 import arcade
@@ -69,7 +69,7 @@ class MyGame(arcade.Window):
         self.enemy_shot_sound = arcade.Sound(ENEMY_SHOT_SOUND_PATH)
         self.enemy_hit_sound = arcade.Sound(ENEMY_HIT_SOUND_PATH)
         self.win_sound = arcade.Sound(WIN_SOUND_PATH)
-        self.lose_sound = arcade.Sound(LOSE_SOUND_PATH)
+        # self.lose_sound = arcade.Sound(LOSE_SOUND_PATH)  # FIXME Lose.wav has a data chunk error of some sort
         self.player = arcade.Sprite(PLAYER_PATH)
         # other temp variables
         self.enemy_shooting = None
@@ -241,13 +241,13 @@ class MyGame(arcade.Window):
                     shot.kill()
                 elif self.player_health == 1:
                     self.player_hit_sound.play()
-                    self.lose_sound.play()
+                    # self.lose_sound.play()
                     self.state = "LOSE"
 
         # check if player is colliding with enemy ships
         if len(self.player.collides_with_list(self.enemy_list)) > 0:
             self.player_hit_sound.play()
-            self.lose_sound.play()
+            # self.lose_sound.play()
             self.state = "LOSE"
 
     def on_key_press(self, symbol, modifiers):
